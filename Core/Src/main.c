@@ -93,6 +93,7 @@ static void testFuncS3( void *pvParameters )
 
 static void testFuncS4( void *pvParameters )
 {
+	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
 	osDelay(100);
 	printf("TestS4 %d\r\n", xTaskGetTickCount());
 }
@@ -117,7 +118,17 @@ static void testFunc3( void *pvParameters ){
 
 static void testFunc4(void *pvParameters)
 {
+
 	printf("Test4\n");
+
+	if(!HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)){
+		BaseType_t xReturnValue = xSchedulerSporadicJobCreate( testFuncS4, "S4", "S4-1", pdMS_TO_TICKS( 2000 ), pdMS_TO_TICKS( 20000 ) );
+		if( pdFALSE == xReturnValue )
+		{
+			printf("Sporadic job S4 not accepted\r\n");
+		}
+	}
+
 	osDelay(100);
 }
 /* USER CODE END 0 */
@@ -166,7 +177,7 @@ int main(void)
   	vSchedulerPeriodicTaskCreate(testFunc3, "t3", configMINIMAL_STACK_SIZE, &c3, 3, &xHandle3, pdMS_TO_TICKS(0), pdMS_TO_TICKS(600), pdMS_TO_TICKS(500), pdMS_TO_TICKS(600));
   	vSchedulerPeriodicTaskCreate(testFunc4, "t4", configMINIMAL_STACK_SIZE, &c4, 4, &xHandle4, pdMS_TO_TICKS(0), pdMS_TO_TICKS(900), pdMS_TO_TICKS(500), pdMS_TO_TICKS(900));
 
-  	BaseType_t xReturnValue = xSchedulerSporadicJobCreate( testFuncS1, "S1", "S1-1", pdMS_TO_TICKS( 500 ), pdMS_TO_TICKS( 6000 ) );
+  	/*BaseType_t xReturnValue = xSchedulerSporadicJobCreate( testFuncS1, "S1", "S1-1", pdMS_TO_TICKS( 500 ), pdMS_TO_TICKS( 6000 ) );
   	if( pdFALSE == xReturnValue )
   	{
   		printf("Sporadic job S1 not accepted\r\n");
@@ -182,12 +193,7 @@ int main(void)
   	if( pdFALSE == xReturnValue )
   	{
   		printf("Sporadic job S3 not accepted\r\n");
-  	}
-  	xReturnValue = xSchedulerSporadicJobCreate( testFuncS4, "S4", "S4-1", pdMS_TO_TICKS( 500 ), pdMS_TO_TICKS( 20000 ) );
-  	if( pdFALSE == xReturnValue )
-  	{
-  		printf("Sporadic job S4 not accepted\r\n");
-  	}
+  	}*/
 
 
   	vSchedulerStart();

@@ -64,8 +64,8 @@ all: main-build
 main-build: Basta.elf secondary-outputs
 
 # Tool invocations
-Basta.elf Basta.map: $(OBJS) $(USER_OBJS) /Users/andrealeonardo/Downloads/Basta/STM32F401RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Basta.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/andrealeonardo/Downloads/Basta/STM32F401RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Basta.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Basta.elf Basta.map: $(OBJS) $(USER_OBJS) /Users/federico/git/SEFES/STM32F401RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Basta.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/federico/git/SEFES/STM32F401RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Basta.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

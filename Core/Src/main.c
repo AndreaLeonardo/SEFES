@@ -1,3 +1,4 @@
+
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
@@ -43,8 +44,11 @@
 UART_HandleTypeDef huart2;
 
 osThreadId defaultTaskHandle;
-/* USER CODE BEGIN PV */
 
+/* USER CODE BEGIN PV */
+SemaphoreHandle_t mbx;
+SemaphoreHandle_t mux1;
+SemaphoreHandle_t mux2;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -72,64 +76,113 @@ TaskHandle_t xHandle1 = NULL;
 TaskHandle_t xHandle2 = NULL;
 TaskHandle_t xHandle3 = NULL;
 TaskHandle_t xHandle4 = NULL;
+TaskHandle_t xHandle5 = NULL;
 
-static void testFuncS1( void *pvParameters )
-{
-	osDelay(100);
-	printf("TestS1 %d\r\n", xTaskGetTickCount());
+
+
+static void taskS1( void *pvParameters ){
+	printf("Task 5(sporadic) start\n");
+	int startTime = xTaskGetTickCount();
+	int i = 0;
+	while(xTaskGetTickCount() - startTime < 20){
+		i++;
+	}
+	while(xSemaphoreTake(mux1, 10) == pdFALSE){}
+	startTime = xTaskGetTickCount();
+	i = 0;
+	while(xTaskGetTickCount() - startTime < 20){
+		i++;
+	}
+	xSemaphoreGive(mux1);
+	printf("Task 5 end\n");
 }
 
-static void testFuncS2( void *pvParameters )
-{
-	osDelay(100);
-	printf("TestS2 %d\r\n", xTaskGetTickCount());
+static void task1( void *pvParameters ){
+	printf("Task 1 start\n");
+	while(xSemaphoreTake(mbx, 10) == pdFALSE){}
+	int startTime = xTaskGetTickCount();
+	int i = 0;
+	while(xTaskGetTickCount() - startTime < 100){
+		i++;
+	}
+	printf("Task 1 end\n");
 }
 
-static void testFuncS3( void *pvParameters )
-{
-	osDelay(100);
-	printf("TestS3 %d\r\n", xTaskGetTickCount());
+static void task2( void *pvParameters ){
+	printf("Task 2 start\n");
+	int startTime = xTaskGetTickCount();
+	int i = 0;
+	while(xTaskGetTickCount() - startTime < 20){
+		i++;
+	}
+	xSemaphoreGive(mbx);
+	startTime = xTaskGetTickCount();
+	i = 0;
+	while(xTaskGetTickCount() - startTime < 20){
+		i++;
+	}
+	printf("Task 2 end\n");
 }
 
-static void testFuncS4( void *pvParameters )
-{
-	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-	osDelay(100);
-	printf("TestS4 %d\r\n", xTaskGetTickCount());
+static void task3( void *pvParameters ){
+	printf("Task 3 start\n");
+	while(xSemaphoreTake(mux1, 10) == pdFALSE){}
+	int startTime = xTaskGetTickCount();
+	int i = 0;
+	while(xTaskGetTickCount() - startTime < 20){
+		i++;
+	}
+	xSemaphoreGive(mux1);
+	startTime = xTaskGetTickCount();
+	i = 0;
+	while(xTaskGetTickCount() - startTime < 100){
+		i++;
+	}
+	while(xSemaphoreTake(mux2, 10) == pdFALSE){}
+	startTime = xTaskGetTickCount();
+	i = 0;
+	while(xTaskGetTickCount() - startTime < 20){
+		i++;
+	}
+	xSemaphoreGive(mux2);
+	printf("Task 3 end\n");
 }
 
-
-
-static void testFunc1( void *pvParameters ){
-	printf("Test1\n");
-	osDelay(100);
+static void task4(void *pvParameters){
+	printf("Task 4 start\n");
+	vTaskPrioritySet(NULL, 3);
+	while(xSemaphoreTake(mux1, 10) == pdFALSE){}
+	int startTime = xTaskGetTickCount();
+	int i = 0;
+	while(xTaskGetTickCount() - startTime < 20){
+		i++;
+	}
+	xSemaphoreGive(mux1);
+	vTaskPrioritySet(NULL, 2);
+	startTime = xTaskGetTickCount();
+	i = 0;
+	while(xTaskGetTickCount() - startTime < 100){
+		i++;
+	}
+	vTaskPrioritySet(NULL, 3);
+	while(xSemaphoreTake(mux2, 10) == pdFALSE){}
+	startTime = xTaskGetTickCount();
+	i = 0;
+	while(xTaskGetTickCount() - startTime < 20){
+		i++;
+	}
+	xSemaphoreGive(mux2);
+	vTaskPrioritySet(NULL, 2);
+	printf("Task 4 end\n");
 }
 
-static void testFunc2( void *pvParameters )
-{
-	printf("Test2\n");
-	osDelay(100);
-}
-
-static void testFunc3( void *pvParameters ){
-	printf("Test3\n");
-	osDelay(100);
-}
-
-static void testFunc4(void *pvParameters)
-{
-
-	printf("Test4\n");
-
+static void task5(void * parameters){
 	if(!HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)){
-		BaseType_t xReturnValue = xSchedulerSporadicJobCreate( testFuncS4, "S4", "S4-1", pdMS_TO_TICKS( 2000 ), pdMS_TO_TICKS( 20000 ) );
-		if( pdFALSE == xReturnValue )
-		{
-			printf("Sporadic job S4 not accepted\r\n");
+		BaseType_t xReturnValue = xSchedulerSporadicJobCreate( taskS1, "S1", "S1-1", pdMS_TO_TICKS( 0 ), pdMS_TO_TICKS( 1200 ) );
+		if( pdFALSE == xReturnValue ) {
+			printf("Sporadic job not accepted\n");
 		}
 	}
-
-	osDelay(100);
 }
 /* USER CODE END 0 */
 
@@ -137,9 +190,11 @@ static void testFunc4(void *pvParameters)
   * @brief  The application entry point.
   * @retval int
   */
-int main(void)
-{
+int main(void){
   /* USER CODE BEGIN 1 */
+	mbx = xSemaphoreCreateCounting(1,0);
+	mux1 = xSemaphoreCreateCounting(1,1);
+	mux2 = xSemaphoreCreateCounting(1,1);
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -164,37 +219,13 @@ int main(void)
   /* USER CODE BEGIN 2 */
   printf( " Hello from Freertos\r\n" );
 
-  	char c1 = 'a';
-  	char c2 = 'b';
-  	char c3 = 'c';
-  	char c4 = 'e';
-
-
   	vSchedulerInit();
-
-  	vSchedulerPeriodicTaskCreate(testFunc1, "t1", configMINIMAL_STACK_SIZE, &c1, 1, &xHandle1, pdMS_TO_TICKS(0), pdMS_TO_TICKS(800), pdMS_TO_TICKS(500), pdMS_TO_TICKS(800));
-  	vSchedulerPeriodicTaskCreate(testFunc2, "t2", configMINIMAL_STACK_SIZE, &c2, 2, &xHandle2, pdMS_TO_TICKS(0), pdMS_TO_TICKS(1600), pdMS_TO_TICKS(500), pdMS_TO_TICKS(1600));
-  	vSchedulerPeriodicTaskCreate(testFunc3, "t3", configMINIMAL_STACK_SIZE, &c3, 3, &xHandle3, pdMS_TO_TICKS(0), pdMS_TO_TICKS(600), pdMS_TO_TICKS(500), pdMS_TO_TICKS(600));
-  	vSchedulerPeriodicTaskCreate(testFunc4, "t4", configMINIMAL_STACK_SIZE, &c4, 4, &xHandle4, pdMS_TO_TICKS(0), pdMS_TO_TICKS(900), pdMS_TO_TICKS(500), pdMS_TO_TICKS(900));
-
-  	/*BaseType_t xReturnValue = xSchedulerSporadicJobCreate( testFuncS1, "S1", "S1-1", pdMS_TO_TICKS( 500 ), pdMS_TO_TICKS( 6000 ) );
-  	if( pdFALSE == xReturnValue )
-  	{
-  		printf("Sporadic job S1 not accepted\r\n");
-  	}
-
-  	xReturnValue = xSchedulerSporadicJobCreate( testFuncS2, "S2", "S2-1", pdMS_TO_TICKS( 500 ), pdMS_TO_TICKS( 40000 ) );
-  	if( pdFALSE == xReturnValue )
-  	{
-  		printf("Sporadic job S2 not accepted\r\n");
-  	}
-
-  	xReturnValue = xSchedulerSporadicJobCreate( testFuncS3, "S3", "S3-1", pdMS_TO_TICKS( 500 ), pdMS_TO_TICKS( 20000 ) );
-  	if( pdFALSE == xReturnValue )
-  	{
-  		printf("Sporadic job S3 not accepted\r\n");
-  	}*/
-
+  	//Phase, Period, WCET, Deadline
+  	vSchedulerPeriodicTaskCreate(task1, "task1", configMINIMAL_STACK_SIZE, NULL, 5, &xHandle1, pdMS_TO_TICKS(0), pdMS_TO_TICKS(400), pdMS_TO_TICKS(0), pdMS_TO_TICKS(400));
+  	vSchedulerPeriodicTaskCreate(task2, "task2", configMINIMAL_STACK_SIZE, NULL, 4, &xHandle2, pdMS_TO_TICKS(0), pdMS_TO_TICKS(400), pdMS_TO_TICKS(0), pdMS_TO_TICKS(400));
+  	vSchedulerPeriodicTaskCreate(task3, "task3", configMINIMAL_STACK_SIZE, NULL, 3, &xHandle3, pdMS_TO_TICKS(0), pdMS_TO_TICKS(800), pdMS_TO_TICKS(0), pdMS_TO_TICKS(800));
+  	vSchedulerPeriodicTaskCreate(task4, "task4", configMINIMAL_STACK_SIZE, NULL, 2, &xHandle4, pdMS_TO_TICKS(0), pdMS_TO_TICKS(1000), pdMS_TO_TICKS(0), pdMS_TO_TICKS(1000));
+  	vSchedulerPeriodicTaskCreate(task5, "sporadicLauncher", configMINIMAL_STACK_SIZE, NULL, 1, &xHandle5, pdMS_TO_TICKS(0), pdMS_TO_TICKS(1200), pdMS_TO_TICKS(0), pdMS_TO_TICKS(1200));
 
   	vSchedulerStart();
 
